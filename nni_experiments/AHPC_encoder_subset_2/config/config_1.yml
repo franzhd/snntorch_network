@@ -1,0 +1,23 @@
+ 
+experimentName: AHPC_encoder_subset_2
+trialConcurrency: 2
+maxExperimentDuration: 48h
+maxTrialNumber: 1000
+trainingService:
+  platform: local
+  useActiveGpu: True
+  maxTrialNumberPerGpu: 2
+searchSpaceFile: ~/snntorch_network/nni_experiments/AHPC_encoder_subset_2/search_space/search_space1.json
+useAnnotation: false
+tuner: 
+    name: Anneal
+    classArgs:
+      optimize_mode: maximize
+
+
+trialCodeDirectory: ~/snntorch_network/nni_experiments/AHPC_encoder_subset_2/code/
+trialCommand: python3 experiment1.py --trial_path AHPC_encoder_subset_2/
+experimentWorkingDirectory: ~/snntorch_network/nni_experiments/AHPC_encoder_subset_2/results/
+trialGpuNumber: 1
+
+

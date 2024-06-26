@@ -1,0 +1,23 @@
+ 
+experimentName: AHPC_train3
+trialConcurrency: 1
+maxExperimentDuration: 24h
+maxTrialNumber: 100
+trainingService:
+  platform: local
+  useActiveGpu: True
+  gpuIndices: 0
+searchSpaceFile: ~/snntorch_network/nni_experiments/AHPC_train3/search_space/search_space1.json
+useAnnotation: false
+tuner: 
+    name: Anneal
+    classArgs:
+      optimize_mode: maximize
+
+
+trialCodeDirectory: ~/snntorch_network/nni_experiments/AHPC_train3/code/
+trialCommand: python3 experiment1.py --trial_path AHPC_train3/results
+experimentWorkingDirectory: ~/snntorch_network/nni_experiments/AHPC_train3/results/
+trialGpuNumber: 1
+
+

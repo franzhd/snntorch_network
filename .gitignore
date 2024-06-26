@@ -1,0 +1,15 @@
+**/__pycache__/
+**/.gitkeep
+nni_experiments/*/results/*
+!nni_experiments/*/results/.gitkeep
+!nni_experiments/dense_1/*
+notebook/*
+!notebook/*.ipynb
+/*
+!nni_experiments
+!notebook
+!src
+!scripts
+data/*
+!data
+!data/.gitkeep

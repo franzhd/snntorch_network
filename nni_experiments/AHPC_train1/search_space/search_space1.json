@@ -1,0 +1,13 @@
+
+{
+    "threshold": {"_type": "quniform", "_value": [0, 2, 0.1]},
+    "beta": {"_type": "quniform", "_value": [0,1, 0.05]},
+    "back_beta": {"_type": "quniform", "_value": [0,1, 0.05]},
+    "slope": {"_type": "quniform", "_value": [5, 50, 5]},
+    "net_hidden_1": {"_type": "quniform", "_value": [64, 256, 32]},
+    "net_hidden_2": {"_type": "quniform", "_value": [128, 512, 32]},
+    "batch_size": {"_type": "quniform", "_value": [256,1024, 128]},
+    "lr": {"_type": "quniform", "_value": [0.0001,0.001,0.0001]},
+    "loss_fn": {"_type": "choice", "_value": ["mse_count_loss", "ce_count_loss"]}
+    
+}
