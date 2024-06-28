@@ -57,10 +57,11 @@ class QuantAhpcNetwork(nn.Module):
                 drop_recurrent=0.0, drop_back=0.0, drop_out=0.0,
                 state_quant=False,
                 time_dim=1,
-                num_bits=8):
+                num_bits=8,
+                layer_loss=None):
         
         super(QuantAhpcNetwork, self).__init__()
-
+        self.layer_loss = layer_loss
 
         self.time_dim = time_dim
         
@@ -132,33 +133,70 @@ class QuantAhpcNetwork(nn.Module):
                                 state_quant=self.quant)
     def forward(self, data):
         spk_rec = []
-        utils.reset(self)  # resets hidden states for all LIF neurons in net
+        # utils.reset(self)  # resets hidden states for all LIF neurons in net
+        if self.encoder:
+            self.encoder_population.reset_hidden()
+        self.leaky1.reset_hidden()
+        self.recurrent.reset_hidden()
+        self.leaky2.reset_hidden()
+        
         dims = list(range(data.dim()))  # Creates a list of dimensions
         dims.pop(self.time_dim)                     # Remove the selected dimension
         dims.insert(0, self.time_dim)               # Insert the selected dimension at the front
         data_permuted = data.permute(dims)  # Permute the tensor
+        if self.layer_loss is not None:
+            if self.encoder:
+                layer1_acc = []
+                layer2_acc = []
+                encoder_acc = []
+            else:
+                layer1_acc = []
+                layer2_acc = []
+
         for slice in data_permuted:
             if self.encoder:
+               
                 x = self.encoder_connection(slice)
                 x, _ = self.encoder_population(x)
+                
+                if self.layer_loss is not None:
+                    encoder_acc.append(x.clone())
+
+
                 x = self.linear1(x)
                 x, _ = self.leaky1(x)
+                
+                if self.layer_loss is not None:
+                    layer1_acc.append(x.clone())   
+
             else:
                 x = self.linear1(slice)
                 x, _ = self.leaky1(x)
+                
+                if self.layer_loss is not None:
+                    layer1_acc.append(x.clone())
+                
 
             x = self.linear2(x)
             x = self.dropout_rec(x)
+            
             spk1 = self.recurrent(x)
+            
+            if self.layer_loss is not None:
+                layer2_acc.append(spk1)
+
             x = self.linear3(spk1)
             x = self.dropout_out(x)
+            
             x, _ = self.leaky2(x)
+            
             spk_rec.append(x)
-
         batch_out = torch.stack(spk_rec)
-
-        return batch_out
-    
+        if self.layer_loss is not None:
+            net_loss = self.layer_loss([torch.stack(layer1_acc), torch.stack(layer2_acc), torch.stack(encoder_acc)])
+            return batch_out, net_loss
+        else:
+            return batch_out
     @staticmethod
     def gen_gaussian_distribution( len, mean, std, max=1.0):
 

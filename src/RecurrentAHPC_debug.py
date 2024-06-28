@@ -68,7 +68,6 @@ class QuantRecurrentAhpc(snn.RLeaky):
         self.dropout = dropout
         self.shared_weight_quant = shared_weight_quant
         self.overwrite_self_recurrent()
-        self.recurrent.init_ahpc()  
 
 
         
@@ -122,9 +121,6 @@ class QuantAhpcBlock(nn.Module):
     def reset_hidden(self):
         self.activation.reset_hidden()    
     
-    def init_ahpc(self): 
-            self.activation.init_leaky()
-
 
     def forward(self, x):
         # Add your forward pass implementation here

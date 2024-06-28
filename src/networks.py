@@ -106,8 +106,10 @@ class QuantAhpcNetworkOLD(nn.Module):
 class QuantAhpcNetwork(nn.Module):
     def __init__(self, num_inputs, num_hidden_1, num_hidden_2, 
                 num_outputs, beta,  grad, threshold, time_dim=1,
-                alpha=None, back_beta=None, num_bits=8, encoder_dim=None):
+                alpha=None, back_beta=None, num_bits=8, encoder_dim=None, layer_loss=None):
         super(QuantAhpcNetwork, self).__init__()
+
+        self.layer_loss = layer_loss
 
         if back_beta is None:
             back_beta = beta
@@ -172,32 +174,73 @@ class QuantAhpcNetwork(nn.Module):
 
     def forward(self, data):
         spk_rec = []
-        utils.reset(self)  # resets hidden states for all LIF neurons in net
+        # utils.reset(self)  # resets hidden states for all LIF neurons in net
+        if self.encoder:
+            self.encoder_population.reset_hidden()
+        self.leaky1.reset_hidden()
+        self.recurrent.reset_hidden()
+        self.leaky2.reset_hidden()
+
         dims = list(range(data.dim()))  # Creates a list of dimensions
         dims.pop(self.time_dim)                     # Remove the selected dimension
         dims.insert(0, self.time_dim)               # Insert the selected dimension at the front
         data_permuted = data.permute(dims)  # Permute the tensor
+        if self.layer_loss is not None:
+            if self.encoder:
+                layer1_acc = []
+                layer2_acc = []
+                encoder_acc = []
+            else:
+                layer1_acc = []
+                layer2_acc = []
+
         for slice in data_permuted:
             if self.encoder:
+               
                 x = self.encoder_connection(slice)
                 x, _ = self.encoder_population(x)
+                
+                if self.training and self.layer_loss is not None:
+                    encoder_acc.append(x.clone().detach().cpu())
+
+
                 x = self.linear1(x)
                 x, _ = self.leaky1(x)
+                
+                if self.training and self.layer_loss is not None:
+                    layer1_acc.append(x.clone().detach().cpu())   
+
             else:
                 x = self.linear1(slice)
                 x, _ = self.leaky1(x)
+                
+                if self.layer_loss is not None:
+                    layer1_acc.append(x.clone().detach().cpu())
+                
 
             x = self.linear2(x)
             x = self.first_dropout(x)
+            
             spk1 = self.recurrent(x)
+            
+            if self.training and self.layer_loss is not None:
+                layer2_acc.append(spk1.clone().detach().cpu())
+
             x = self.linear3(spk1)
             x = self.second_dropout(x)
+            
             x, _ = self.leaky2(x)
+            
             spk_rec.append(x)
+        
+        net_loss = 0
+        
+        if self.training and self.layer_loss is not None:
+            net_loss = self.layer_loss([torch.stack(layer1_acc), torch.stack(layer2_acc), torch.stack(encoder_acc)])
 
         batch_out = torch.stack(spk_rec)
 
-        return batch_out
+        return batch_out, net_loss
     
     def save_to_npz(self, path):
         

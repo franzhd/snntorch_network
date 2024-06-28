@@ -18,10 +18,94 @@ import json
 import random as rn
 import pandas as pd
 import seaborn as sn
-
 #from keras.utils import to_categorical
 
 from sklearn.model_selection import train_test_split
+
+
+class regularization_loss(object):
+    def __init__(self, min_hz, max_hz ,time_window, pth = 0.99):
+        """
+        Initializes the regularization loss function.
+
+        Args:
+            min_hz (float): The minimum desired spike frequency in Hz.
+            max_hz (float): The maximum desired spike frequency in Hz.
+            time_window (float): The length of the time window in seconds.
+            pth (float, optional): The percentile value used to calculate the threshold spike frequency. Defaults to 0.99.
+        """
+        self.min_hz = min_hz
+        self.max_hz = max_hz
+        self.pth = pth
+        self.time_window = time_window        
+
+    # def __call0__(self, spike_count_array: list[torch.float32]) -> torch.float32:
+    #     """
+    #     Calculates the regularization loss.
+
+    #     Args:
+    #         spike_count_array (list[torch.float32]): A list of spike count arrays.
+
+    #     Returns:
+    #         torch.float32: The regularization loss.
+    #     """
+    #     loss = 0
+    #     """ [time, batch, channels]"""
+
+    #     for i in range(len(spike_count_array)):
+
+    #         layer_loss = 0
+
+    #         for j in range(spike_count_array[i].shape[2]):
+    #             #print('spike_count_array[i].shape',spike_count_array[i].shape)
+    #             frequency_list = []
+
+    #             # for z in range(spike_count_array[i].shape[1]):
+
+    #             #     frequency_list.append(torch.sum(spike_count_array[i][:,z,j])/self.time_window)
+                
+    #             frequency_list = torch.sum(spike_count_array[i][:,:,j], dim=(0)) / self.time_window
+    #             #print('frequency list shape', len(frequency_list))
+    #             frequency_matrix = torch.sum(spike_count_array[i], dim=(0, 2)) / self.time_window
+    #             frequency_list.sort()
+
+    #             Rpth = frequency_list[int(self.pth*len(frequency_list))]
+
+    #             layer_loss += (F.relu(Rpth - self.max_hz) + F.relu(self.min_hz - Rpth))**2 
+
+    #         loss += layer_loss / spike_count_array[i].shape[1] 
+        
+    #     return loss
+        
+    def __call__(self, spike_count_array: list[torch.float32]) -> torch.float32:
+        """
+        Calculates the regularization loss.
+
+        Args:
+            spike_count_array (list[torch.float32]): A list of spike count arrays.
+
+        Returns:
+            torch.float32: The regularization loss.
+        """
+        loss = 0
+        """ [time, batch, channels]"""
+
+        for i in range(len(spike_count_array)):
+
+            layer_loss = 0
+
+            frequency_matrix = torch.sum(spike_count_array[i], dim=(0)) / self.time_window
+            frequency_matrix = torch.sort(frequency_matrix, dim=-1).values
+            Rpth = frequency_matrix[int(self.pth*frequency_matrix.shape[0])]
+            
+            for j in range(spike_count_array[i].shape[2]):
+        
+                layer_loss += (F.relu(Rpth[j] - self.max_hz) + F.relu(self.min_hz - Rpth[j]))**2 
+
+            loss += layer_loss / spike_count_array[i].shape[1] 
+        
+        return loss
+    
 def compute_output_labels(matrix):
     # Sum the elements along the last dimension
     #print(f'compute_output_labels matrix shape {matrix.shape}')
