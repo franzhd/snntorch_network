@@ -29,7 +29,7 @@ class QuantRecurrentAhpc(snn.RLeaky):
         output=False,
         reset_delay=False,
         alpha = None,
-        dropout=0.0,
+        dropout=0.0
         
     ):
         
@@ -49,7 +49,7 @@ class QuantRecurrentAhpc(snn.RLeaky):
             reset_mechanism=reset_mechanism,
             state_quant=state_quant,
             output=output,
-            reset_delay=reset_delay,
+            reset_delay=reset_delay
         )
 
         assert linear_features is not None, "Linear features must not be None"

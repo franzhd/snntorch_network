@@ -103,7 +103,7 @@ class regularization_loss(object):
                 layer_loss += (F.relu(Rpth[j] - self.max_hz) + F.relu(self.min_hz - Rpth[j]))**2 
 
             loss += layer_loss / spike_count_array[i].shape[1] 
-        
+            #print(f'net loss {loss}')
         return loss
     
 def compute_output_labels(matrix):

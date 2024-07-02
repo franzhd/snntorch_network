@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import snntorch as snn
+from snntorch.functional import probe
 import brevitas.nn as qnn 
 from snntorch import utils
 from snntorch import surrogate
@@ -9,7 +10,6 @@ from snntorch import functional as SF
 from snntorch.functional import quant
 from RecurrentAHPC_debug import QuantRecurrentAhpc
 import numpy as np
-import pdb 
 
 def state_quant_fn(input_, num_bits=8, threshold=1, lower_limit=0, upper_limit=0.2): # <-- VitF
 
@@ -193,10 +193,39 @@ class QuantAhpcNetwork(nn.Module):
             spk_rec.append(x)
         batch_out = torch.stack(spk_rec)
         if self.layer_loss is not None:
-            net_loss = self.layer_loss([torch.stack(layer1_acc), torch.stack(layer2_acc), torch.stack(encoder_acc)])
+            if self.encoder:
+                net_loss = self.layer_loss([torch.stack(layer1_acc), torch.stack(layer2_acc), torch.stack(encoder_acc)])
+            else:
+                net_loss = self.layer_loss([torch.stack(layer1_acc), torch.stack(layer2_acc)])
+
             return batch_out, net_loss
         else:
             return batch_out
+    
+    def debug_init(self):
+
+        self.spk_monitor = probe.OutputMonitor(self, instance = (snn.Leaky, snn.RLeaky))
+        self.mem_monitor = probe.AttributeMonitor('mem', False, self, instance = (snn.Leaky))
+        self.spk_monitor.enable()
+        self.mem_monitor.enable()
+
+    def debug_pause(self):
+        self.spk_monitor.disable()
+        self.mem_monitor.disable() 
+    
+    def  debug_start(self):
+        self.spk_monitor.enable()
+        self.mem_monitor.enable()
+
+    def clear_monitor(self):
+        self.spk_monitor.clear_recorded_data()
+        self.mem_monitor.clear_recorded_data()
+    
+    def get_monitor_results(self):
+        return self.spk_monitor, self.mem_monitor
+    
+
+
     @staticmethod
     def gen_gaussian_distribution( len, mean, std, max=1.0):
 
@@ -206,7 +235,7 @@ class QuantAhpcNetwork(nn.Module):
         mean = round(mean*1.40)
         offset = round((bin - len)/2)
         x = torch.linspace(0, bin, bin)
-        y = torch.exp(-((x - mean) ** 2) / (2 * std ** 2))*max #multiply for the actual treshold max 0.5 is placeolder
+        y = torch.exp(-((x - mean) ** 2) / (2 * std ** 2))*max #multiply for the actual treshold max 
         yy = y[offset:-offset]
         yy[yy < 0.01] = 0.1
         return yy
