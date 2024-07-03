@@ -22,7 +22,115 @@ import seaborn as sn
 
 from sklearn.model_selection import train_test_split
 
+import itertools
+from scipy.stats import gaussian_kde
+from tqdm import tqdm
 
+def calculate_kde(data):
+    return gaussian_kde(data)
+
+def calculate_kld(kde_p, kde_q, data_points, epsilon=1e-10):
+    p = kde_p(data_points)
+    q = kde_q(data_points)
+    
+    # Ensure no zero values
+    p = np.maximum(p, epsilon)
+    q = np.maximum(q, epsilon)
+    
+    return np.sum(p * np.log(p / q))
+
+
+def generate_class_distance(kdes, class1, class2, epsilon=1e-10):
+    kl_distance = 0
+    for kde1, kde2 in zip(kdes[class1], kdes[class2]):
+        data_points = np.linspace(min(kde1.dataset.min(), kde2.dataset.min()), max(kde1.dataset.max(), kde2.dataset.max()), 100)
+        kl_distance += calculate_kld(kde1, kde2, data_points, epsilon)
+        kl_distance += calculate_kld(kde2, kde1, data_points, epsilon)
+    return kl_distance
+
+def generate_class_distance_matrix(kdes, num_classes, epsilon=1e-10):
+    distance_matrix = np.zeros((num_classes, num_classes))
+    for i in tqdm(range(num_classes), desc="Class Distance Matrix Calculation"):
+        for j in range(i + 1, num_classes):
+            distance = generate_class_distance(kdes, i, j, epsilon)
+            distance_matrix[i, j] = distance
+            distance_matrix[j, i] = distance
+    return distance_matrix
+
+def calculate_separability_score(combination, distance_matrix):
+    score = 0
+    for (i, j) in itertools.combinations(combination, 2):
+        score += distance_matrix[i, j]
+    return score
+
+def calculate_distance_matrix(data, labels, num_classes, epsilon=1e-10, show_matrix=False, save_matrix_name=None):
+    
+    kdes = {cls: [] for cls in range(num_classes)}
+    
+    print("Calculating KDEs for each class...")
+    for cls in tqdm(range(num_classes), desc="Classes"):
+        if len(data[labels == cls]) == 0:
+            continue
+        else:
+            for i in range(data.shape[1]):
+                kde = calculate_kde(data[labels == cls,i,:].reshape(-1))
+                kdes[cls].append(kde)
+
+    
+    print("Generating class distance matrix using KLD...")
+    distance_matrix = generate_class_distance_matrix(kdes, num_classes, epsilon)
+    if save_matrix_name is not None:
+        np.save(f"distance_matrix_{save_matrix_name}.npy", distance_matrix)
+    if show_matrix:
+        
+        # Generate heatmap
+        plt.imshow(distance_matrix, cmap='hot', interpolation='nearest')
+
+        # Add colorbar
+        plt.colorbar()
+
+        # Add title and labels
+        plt.title('Distance Matrix Heatmap')
+        plt.xlabel('Class')
+        plt.ylabel('Class')
+
+        # Show the plot
+        plt.show()
+    
+    return distance_matrix
+
+def calculate_separability_scores(distance_matrix, num_classes, n):
+
+    class_combinations = itertools.combinations(range(num_classes), n)
+    separability_scores = []
+    print("Calculating final separability scores...")
+    for combination in tqdm(class_combinations, desc="Combinations"):
+        score = calculate_separability_score(combination, distance_matrix)
+        separability_scores.append((combination, score))
+    
+    separability_scores.sort(key=lambda x: x[1], reverse=True)
+    
+    top_combinations = separability_scores[:10]
+    for comb, score in top_combinations:
+        print(f"Combination: {comb}, Score: {score}")
+    
+    return separability_scores
+
+def distance_matrix_subset(distance_matrix, subset):
+    subset_matrix = np.zeros((len(subset), len(subset)))
+    for i in range(len(subset)):
+        for j in range(i, len(subset)):
+            subset_matrix[i, j] = distance_matrix[subset[i], subset[j]]
+            subset_matrix[j, i] = distance_matrix[subset[j], subset[i]]
+    
+    plt.imshow(subset_matrix, cmap='hot', interpolation='nearest')
+    plt.colorbar()
+    plt.title('Distance Matrix Heatmap')
+    plt.xlabel('Class')
+    plt.ylabel('Class')
+    plt.show()
+
+    return subset_matrix
 class regularization_loss(object):
     def __init__(self, min_hz, max_hz ,time_window, pth = 0.99):
         """

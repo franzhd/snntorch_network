@@ -83,9 +83,10 @@ class WisdmDatasetParser():
         print(f'ytrain shape {y_train.shape}')
         print(f'yval shape {y_val.shape}')
         print(f'ytest shape {y_test.shape}')
-        x_train = np.reshape(x_train,(x_train.shape[0],x_train.shape[2],x_train.shape[1]))
-        x_val = np.reshape(x_val,(x_val.shape[0],x_val.shape[2],x_val.shape[1]))
-        x_test = np.reshape(x_test,(x_test.shape[0],x_test.shape[2],x_test.shape[1]))
+        
+        x_train = np.transpose(x_train,axes=(0,2,1))
+        x_val = np.transpose(x_val,axes=(0,2,1))
+        x_test = np.transpose(x_test,axes=(0,2,1))
         
         if self.class_sublset is not None:
             if self.class_sublset == '7BC':
