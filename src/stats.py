@@ -175,7 +175,7 @@ class LearningStats:
 
         test_str = str(self.testing)
         if len(test_str) > 0:
-            test_str = ' | Test  ' + test_str
+            test_str = ' | Test ' + test_str
         return f'Train {str(self.training)}{val_str}{test_str}'
 
     def print(
@@ -288,17 +288,17 @@ class LearningStats:
         
         if self.training.valid_accuracy_log:
             acc_plot_exists = figure_init(figures[1])
-            plt.plot(self.training.accuracy_log, label='Training')
+            plt.plot(self.training.accuracy_log, label=f'Training, max accuracy = {self.training.max_accuracy:.5f}')
         
         if self.validation.valid_accuracy_log:
             if acc_plot_exists is False:
                 acc_plot_exists = figure_init(figures[1])
-            plt.plot(self.validation.accuracy_log, label='Validation')
+            plt.plot(self.validation.accuracy_log, label=f'Validation, max accuracy = {self.validation.max_accuracy:.5f}')
         
         if self.testing.valid_accuracy_log:
             if acc_plot_exists is False:
                 acc_plot_exists = figure_init(figures[1])
-            plt.plot(self.testing.accuracy_log, label='Testing')
+            plt.plot(self.testing.accuracy_log, label=f'Testing, max accuracy = {self.testing.max_accuracy:.5f}')
         
         accuracy_ylabel = self.training.accuracy_str.capitalize()
         

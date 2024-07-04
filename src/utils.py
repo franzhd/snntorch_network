@@ -26,6 +26,15 @@ import itertools
 from scipy.stats import gaussian_kde
 from tqdm import tqdm
 
+
+# Function to move the cursor up by a specified number of lines
+def move_cursor_up(lines):
+    sys.stdout.write(f'\033[{lines}A')
+
+# Function to clear the current line
+def clear_line():
+    sys.stdout.write('\033[K')
+
 def calculate_kde(data):
     return gaussian_kde(data)
 

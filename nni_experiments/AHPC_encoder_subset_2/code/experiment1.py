@@ -115,14 +115,16 @@ def main():
                 _, predictions = outputs.sum(dim=0).max(1)
                 gen_confusion_matrix(predictions,labels, f'./{trained_folder}/')
                 net.save_to_npz(f'./{trained_folder}/network_best.npz')
-                stats.save( f'./{trained_folder}/')
+                del predictions
 
             del outputs
             del labels
+            
             torch.cuda.empty_cache()
-        
-    nni.report_final_result(stats.testing.max_accuracy*100)
     stats.plot(figsize=(15, 5),path=f'./{trained_folder}/')
+    stats.save( f'./{trained_folder}/')
+    nni.report_final_result(stats.testing.max_accuracy*100)
+
 
 if __name__ == '__main__':
     main()

@@ -53,7 +53,7 @@ class WisdmEncodedDatasetParser():
 
 
 class WisdmDatasetParser():
-    def __init__(self, file_name, norm="std", class_sublset = None):
+    def __init__(self, file_name, norm="std", class_sublset = None, subset_list = None):
         self.file_name = file_name
         (x_train, x_val, x_test, y_train, y_val, y_test) = self.load_wisdm2_data(file_name)
         self.class_sublset = class_sublset
@@ -95,6 +95,8 @@ class WisdmDatasetParser():
                 selected_classes = [11,12,13,14,15,16,17]
             elif self.class_sublset == 'subset_2':
                 selected_classes = [6, 7, 8, 9, 10, 11, 12]
+            elif self.class_sublset == 'custom':
+                selected_classes = subset_list
             
             x_train, y_train = filter_dataset(x_train, y_train, selected_classes)
             x_val, y_val = filter_dataset(x_val, y_val, selected_classes)
