@@ -164,13 +164,14 @@ class Assistant:
         """
         self.net.eval()
 
-        if self.device is None:
-            for p in self.net.parameters():
-                self.device = p.device
-                break
-        device = self.device
+        # if self.device is None:
+        #     for p in self.net.parameters():
+        #         self.device = p.device
+        #         break
+        # device = self.device
 
         with torch.no_grad():
+            device = self.net.device
             input = input.to(device)
             target = target.to(device)
 
@@ -227,11 +228,11 @@ class Assistant:
         """
         self.net.eval()
         
-        if self.device is None:
-            for p in self.net.parameters():
-                self.device = p.device
-                break
-        device = self.device
+        # if self.device is None:
+        #     for p in self.net.parameters():
+        #         self.device = p.device
+        #         break
+        # device = self.device
         
         with torch.no_grad():
             device = self.net.device
@@ -258,7 +259,6 @@ class Assistant:
             if self.stats is not None:
                 
                 self.stats.validation.num_samples += input.shape[0]
-                
                 self.stats.validation.loss_sum += loss.cpu().data.item() * input.shape[0]
                 
                 if self.classifier:   # classification
