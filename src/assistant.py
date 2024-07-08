@@ -188,7 +188,7 @@ class Assistant:
 
             loss = self.loss(output, target)
 
-            if self.lam is not None:  # add net_loss before backward step
+            if self.lam is not None:  
                 loss += self.lam * net_loss
             
             if self.stats is not None:
@@ -226,7 +226,13 @@ class Assistant:
 
         """
         self.net.eval()
-
+        
+        if self.device is None:
+            for p in self.net.parameters():
+                self.device = p.device
+                break
+        device = self.device
+        
         with torch.no_grad():
             device = self.net.device
             input = input.to(device)
@@ -237,15 +243,18 @@ class Assistant:
                 if self.lam is None:
                     output, mem = self.net(input)
                 else:
-                    output, _, mem = self.net(input)
+                    output, net_loss, mem = self.net(input)
             else:
                 if self.lam is None:
                     output = self.net(input)
                 else:
-                    output, _ = self.net(input)
+                    output, net_loss = self.net(input)
 
             loss = self.loss(output, target)
-
+            
+            if self.lam is not None:  
+                loss += self.lam * net_loss
+            
             if self.stats is not None:
                 
                 self.stats.validation.num_samples += input.shape[0]
