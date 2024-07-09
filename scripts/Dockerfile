@@ -32,9 +32,17 @@ RUN sudo apt -y install --no-install-recommends \
     unzip \
     wget \
     zip \
-    nano
+    nano \
+    gnupg2
 
-RUN sudo apt-get clean
+RUN wget -qO - https://ngrok-agent.s3.amazonaws.com/ngrok.asc | apt-key add - \
+    && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | tee /etc/apt/sources.list.d/ngrok.list \
+    && apt-get update && apt-get install -y ngrok
+
+
+COPY ngrok_token /root/ngrok_token
+
+RUN ngrok config add-authtoken $(cat /root/ngrok_token)
 
 RUN conda init bash
 
@@ -46,7 +54,11 @@ RUN /opt/conda/bin/python3 -m pip install --upgrade pip
 
 RUN pip3 install git+https://github.com/jeshraghian/snntorch@40ad1360c644f948889cb9610121397c6ce943c8
 
-RUN python3 -m pip install --no-cache-dir nni==2.7 tqdm "typeguard<3" filelock==3.10 jupyterlab notebook ipywidgets seaborn matplotlib scikit-learn tabulate
+RUN python3 -m pip install --no-cache-dir nni==2.7 tqdm "typeguard<3" filelock==3.10 jupyterlab notebook ipywidgets seaborn matplotlib scikit-learn tabulate brevitas tqdm pandas scipy
 
 
+    
+
+
+RUN 
 WORKDIR /root

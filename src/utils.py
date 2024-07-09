@@ -141,7 +141,7 @@ def distance_matrix_subset(distance_matrix, subset):
 
     return subset_matrix
 class regularization_loss(object):
-    def __init__(self, min_hz, max_hz ,time_window, pth = 0.99):
+    def __init__(self, min_hz, max_hz ,time_window, pth = 0.99, device='cuda'):
         """
         Initializes the regularization loss function.
 
@@ -150,12 +150,13 @@ class regularization_loss(object):
             max_hz (float): The maximum desired spike frequency in Hz.
             time_window (float): The length of the time window in seconds.
             pth (float, optional): The percentile value used to calculate the threshold spike frequency. Defaults to 0.99.
+            device (str, optional): The device of the output loss. Defaults to 'cuda'.
         """
         self.min_hz = min_hz
         self.max_hz = max_hz
         self.pth = pth
         self.time_window = time_window        
-
+        self.device = device
     # def __call0__(self, spike_count_array: list[torch.float32]) -> torch.float32:
     #     """
     #     Calculates the regularization loss.
@@ -204,8 +205,9 @@ class regularization_loss(object):
         Returns:
             torch.float32: The regularization loss.
         """
-        loss = 0
+        
         """ [time, batch, channels]"""
+        loss = torch.tensor(0.0)
 
         for i in range(len(spike_count_array)):
 
@@ -220,8 +222,8 @@ class regularization_loss(object):
                 layer_loss += (F.relu(Rpth[j] - self.max_hz) + F.relu(self.min_hz - Rpth[j]))**2 
 
             loss += layer_loss / spike_count_array[i].shape[1] 
-            #print(f'net loss {loss}')
-        return loss
+    
+        return loss.to(self.device)
     
 def compute_output_labels(matrix):
     # Sum the elements along the last dimension

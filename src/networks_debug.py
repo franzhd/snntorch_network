@@ -134,8 +134,10 @@ class QuantAhpcNetwork(nn.Module):
     def forward(self, data):
         spk_rec = []
         # utils.reset(self)  # resets hidden states for all LIF neurons in net
+        
         if self.encoder:
             self.encoder_population.reset_hidden()
+
         self.leaky1.reset_hidden()
         self.recurrent.reset_hidden()
         self.leaky2.reset_hidden()
@@ -144,7 +146,9 @@ class QuantAhpcNetwork(nn.Module):
         dims.pop(self.time_dim)                     # Remove the selected dimension
         dims.insert(0, self.time_dim)               # Insert the selected dimension at the front
         data_permuted = data.permute(dims)  # Permute the tensor
+        
         if self.layer_loss is not None:
+        
             if self.encoder:
                 layer1_acc = []
                 layer2_acc = []
@@ -160,21 +164,21 @@ class QuantAhpcNetwork(nn.Module):
                 x, _ = self.encoder_population(x)
                 
                 if self.layer_loss is not None:
-                    encoder_acc.append(x.clone())
+                    encoder_acc.append(x.clone().cpu())
 
 
                 x = self.linear1(x)
                 x, _ = self.leaky1(x)
                 
                 if self.layer_loss is not None:
-                    layer1_acc.append(x.clone())   
+                    layer1_acc.append(x.clone().cpu())   
 
             else:
                 x = self.linear1(slice)
                 x, _ = self.leaky1(x)
                 
                 if self.layer_loss is not None:
-                    layer1_acc.append(x.clone())
+                    layer1_acc.append(x.clone().cpu())
                 
 
             x = self.linear2(x)
@@ -183,7 +187,7 @@ class QuantAhpcNetwork(nn.Module):
             spk1 = self.recurrent(x)
             
             if self.layer_loss is not None:
-                layer2_acc.append(spk1)
+                layer2_acc.append(spk1.clone().cpu())
 
             x = self.linear3(spk1)
             x = self.dropout_out(x)
@@ -191,12 +195,18 @@ class QuantAhpcNetwork(nn.Module):
             x, _ = self.leaky2(x)
             
             spk_rec.append(x)
+
         batch_out = torch.stack(spk_rec)
+
         if self.layer_loss is not None:
             if self.encoder:
                 net_loss = self.layer_loss([torch.stack(layer1_acc), torch.stack(layer2_acc), torch.stack(encoder_acc)])
+                del encoder_acc
             else:
                 net_loss = self.layer_loss([torch.stack(layer1_acc), torch.stack(layer2_acc)])
+
+            del layer1_acc
+            del layer2_acc
 
             return batch_out, net_loss
         else:

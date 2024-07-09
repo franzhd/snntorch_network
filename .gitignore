@@ -10,6 +10,8 @@ notebook/*
 !notebook
 !src
 !scripts
+/scripts/ngrok_token
+/scripts/ngrok_url.txt
 data/*
 !data
 !data/.gitkeep
