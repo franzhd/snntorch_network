@@ -1,7 +1,7 @@
 
 DATASET_NAME = 'data_watch_subset_0_40.npz'
 DATASET_SUBSET = 'custom'
-SUBSET_LIST = [0, 4, 6, 8, 9, 10, 14]
+SUBSET_LIST = [0, 1, 4, 8, 9, 10, 14]
 TRAIN_FOLDER_NAME = 'Trained'
 NORM_TYPE = None
 NUM_WORKERS = 8
