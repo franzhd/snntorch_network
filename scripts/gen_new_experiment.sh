@@ -35,7 +35,7 @@ maxTrialNumber: 1000
 trainingService:
   platform: local
   useActiveGpu: True
-  maxTrialNumberPerGpu: 2
+  maxTrialNumberPerGpu: 4
 searchSpaceFile: ~/snntorch_network/nni_experiments/$1/search_space/search_space1.json
 useAnnotation: false
 tuner: 
