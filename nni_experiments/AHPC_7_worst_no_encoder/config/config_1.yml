@@ -1,0 +1,23 @@
+ 
+experimentName: AHPC_7_worst_no_encoder
+trialConcurrency: 1
+maxExperimentDuration: 72h
+maxTrialNumber: 1000
+trainingService:
+  platform: local
+  useActiveGpu: True
+  maxTrialNumberPerGpu: 2
+searchSpaceFile: ~/snntorch_network/nni_experiments/AHPC_7_worst_no_encoder/search_space/search_space1.json
+useAnnotation: false
+tuner: 
+    name: Anneal
+    classArgs:
+      optimize_mode: maximize
+
+
+trialCodeDirectory: ~/snntorch_network/nni_experiments/AHPC_7_worst_no_encoder/code/
+trialCommand: python3 experiment1.py --trial_path AHPC_7_worst_no_encoder/
+experimentWorkingDirectory: ~/snntorch_network/nni_experiments/AHPC_7_worst_no_encoder/results/
+trialGpuNumber: 1
+
+
