@@ -2,7 +2,7 @@
 **/.gitkeep
 nni_experiments/*/results/*
 !nni_experiments/*/results/.gitkeep
-!nni_experiments/dense_1/*
+nni_experiments/*.tar.gz
 notebook/*
 !notebook/*.ipynb
 /*
