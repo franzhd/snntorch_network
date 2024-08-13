@@ -171,7 +171,7 @@ class QuantRecurrentAhpc(snn.RLeaky):
 
         self.shared_weight_quant = shared_weight_quant
         self.overwrite_self_recurrent()
-
+        self.init_rleaky()
 
         
     def overwrite_self_recurrent(self):
@@ -189,6 +189,10 @@ class QuantRecurrentAhpc(snn.RLeaky):
             + input_
             - self.recurrent(self.spk)
         )
+        return base_fn
+    
+    def _base_state_function(self, input_, spk, mem):
+        base_fn = self.beta.clamp(0, 1) * mem + input_ - self.recurrent(spk)
         return base_fn
     
     def reset_hidden(self):
@@ -243,6 +247,7 @@ class QuantAhpcBlock(nn.Module):
         _, mem_out = self.activation(x)
         x = self.output_dense(mem_out)
         return x
+    
     def to_npz(self):
         input_dense = self.input_dense.weight.detach().cpu().numpy()
         activation_beta = self.activation.beta.data.detach().cpu().numpy()

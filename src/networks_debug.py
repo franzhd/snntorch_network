@@ -116,7 +116,7 @@ class QuantAhpcNetwork(nn.Module):
                                             init_hidden=True, reset_delay=True, learn_beta=True,
                                             learn_threshold=True, learn_recurrent=True, 
                                             threshold=vth_recurrent,
-                                            shared_weight_quant=self.linear1.weight_quant,state_quant=self.quant, dropout=drop_back)
+                                            shared_weight_quant=self.linear1.weight_quant,state_quant=self.quant, dropout=drop_back, output=True)
         self.linear3 = qnn.QuantLinear(num_hidden_2, num_outputs, bias=False,
                                                         weight_bit_width=num_bits,
                                                         weight_quant=  self.linear1.weight_quant)
@@ -184,7 +184,7 @@ class QuantAhpcNetwork(nn.Module):
             x = self.linear2(x)
             x = self.dropout_rec(x)
             
-            spk1 = self.recurrent(x)
+            spk1, _ = self.recurrent(x)
             
             if self.layer_loss is not None:
                 layer2_acc.append(spk1.clone().cpu())
