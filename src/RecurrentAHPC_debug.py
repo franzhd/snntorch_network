@@ -130,6 +130,7 @@ class QuantAhpcBlock(nn.Module):
         x = self.output_dense(mem_out)
         return x
     
+    
     def to_npz(self):
         input_dense = self.input_dense.weight.detach().cpu().numpy()
         activation_beta = self.activation.beta.data.detach().cpu().numpy()
