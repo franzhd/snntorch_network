@@ -60,7 +60,7 @@ def main():
     net_loss = regularization_loss(0.1, 0.03, 40)
     
     net = QuantAhpcNetwork(NET_INPUT_DIM, int(params['net_hidden_1']), int(params['net_hidden_2']), NET_OUTPUT_DIM, grad,
-                        vth_in=params['vth_in'], vth_recurrent=params['vth_recurrent'], vth_out=params['vth_out'],
+                        vth_in=params['vth_in'], vth_recurrent=params['vth_recurrent'], vth_out=params['vth_out'], vth_back=params['vth_back'],
                         beta_in=params['beta_in'], beta_recurrent=params['beta_recurrent'], beta_back=params['beta_back'], beta_out=params['beta_out'],
                         drop_recurrent=params['drop_recurrent'], drop_back=params['drop_back'], drop_out=params['drop_out'], time_dim=2, layer_loss=net_loss).to(device)
 

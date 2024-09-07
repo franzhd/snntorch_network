@@ -51,7 +51,7 @@ class QuantAhpcNetwork(nn.Module):
     def __init__(self,
                 num_inputs, num_hidden_1, num_hidden_2, num_outputs,
                 grad,
-                vth_in, vth_recurrent, vth_out,
+                vth_in, vth_recurrent, vth_back, vth_out, 
                 beta_in, beta_recurrent, beta_back, beta_out,
                 encoder_dim=None, vth_enc_value=1.0, vth_std=1000,beta_std=1000,
                 drop_recurrent=0.0, drop_back=0.0, drop_out=0.0,
@@ -112,10 +112,10 @@ class QuantAhpcNetwork(nn.Module):
         
         self.dropout_rec = nn.Dropout(p=drop_recurrent)  
 
-        self.recurrent = QuantRecurrentAhpc(beta_recurrent, beta_back, spike_grad=grad, linear_features = num_hidden_2,
-                                            init_hidden=True, reset_delay=True, learn_beta=True,
+        self.recurrent = QuantRecurrentAhpc(beta_recurrent, beta_back, vth_back, spike_grad=grad, linear_features = num_hidden_2,
+                                            init_hidden=False, reset_delay=False, learn_beta=True,
                                             learn_threshold=True, learn_recurrent=True, 
-                                            threshold=vth_recurrent,
+                                            threshold=vth_recurrent, reset_mechanism="zero",
                                             shared_weight_quant=self.linear1.weight_quant,state_quant=self.quant, dropout=drop_back, output=True)
         self.linear3 = qnn.QuantLinear(num_hidden_2, num_outputs, bias=False,
                                                         weight_bit_width=num_bits,
@@ -141,7 +141,7 @@ class QuantAhpcNetwork(nn.Module):
         self.leaky1.reset_hidden()
         self.recurrent.reset_hidden()
         self.leaky2.reset_hidden()
-        
+        rspk, rmem = self.recurrent.init_rleaky()
         dims = list(range(data.dim()))  # Creates a list of dimensions
         dims.pop(self.time_dim)                     # Remove the selected dimension
         dims.insert(0, self.time_dim)               # Insert the selected dimension at the front
@@ -156,7 +156,7 @@ class QuantAhpcNetwork(nn.Module):
             else:
                 layer1_acc = []
                 layer2_acc = []
-
+        i = 0
         for slice in data_permuted:
             if self.encoder:
                
@@ -184,12 +184,12 @@ class QuantAhpcNetwork(nn.Module):
             x = self.linear2(x)
             x = self.dropout_rec(x)
             
-            spk1, _ = self.recurrent(x)
+            rspk, rmem = self.recurrent(x, rspk, rmem)
             
             if self.layer_loss is not None:
-                layer2_acc.append(spk1.clone().cpu())
+                layer2_acc.append(rspk.clone().cpu())
 
-            x = self.linear3(spk1)
+            x = self.linear3(rspk)
             x = self.dropout_out(x)
             
             x, _ = self.leaky2(x)
@@ -253,15 +253,16 @@ class QuantAhpcNetwork(nn.Module):
 
     def save_to_npz(self, path):
         
+        w_scale = self.linear1.quant_weight_scale().detach().cpu().numpy()
+        w_zero_point = self.linear1.quant_weight_zero_point().detach().cpu().numpy()
         linear1 = self.linear1.weight.data.detach().cpu().numpy()
         leaky1_betas = self.leaky1.beta.data.detach().cpu().numpy()
         leaky1_vth = self.leaky1.threshold.data.detach().cpu().numpy()
-
         linear2 = self.linear2.weight.data.detach().cpu().numpy()
 
         recurrent_betas = self.recurrent.beta.data.detach().cpu().numpy()
         recurrent_vth = self.recurrent.threshold.data.detach().cpu().numpy()
-        input_dense, activation, output_dense = self.recurrent.recurrent.to_npz()
+        input_dense, activation_betas, activation_vth, output_dense = self.recurrent.recurrent.to_npz()
 
         linear3 = self.linear3.weight.data.detach().cpu().numpy()
         leaky2_betas = self.leaky2.beta.data.detach().cpu().numpy()
@@ -272,22 +273,22 @@ class QuantAhpcNetwork(nn.Module):
             encoder_population_betas = self.encoder_population.beta.data.detach().cpu().numpy()
             encoder_population_vth = self.encoder_population.threshold.data.detach().cpu().numpy()
             
-            np.savez_compressed(path, encoder_connection=encoder_connection, encoder_population_betas=encoder_population_betas,
+            np.savez_compressed(path,w_scale=w_scale, w_zero_point=w_zero_point, encoder_connection=encoder_connection, encoder_population_betas=encoder_population_betas,
                                 encoder_population_vth=encoder_population_vth, linear1=linear1, leaky1_betas=leaky1_betas,
                                 leaky1_vth=leaky1_vth, linear2=linear2, recurrent_betas=recurrent_betas, recurrent_vth=recurrent_vth,
-                                input_dense=input_dense, activation=activation, output_dense=output_dense,
+                                input_dense=input_dense, activation_betas=activation_betas,activation_vth=activation_vth, output_dense=output_dense,
                                 linear3=linear3, leaky2_betas=leaky2_betas, leaky2_vth=leaky2_vth)
         else:
-            np.savez_compressed(path, linear1=linear1, leaky1_betas=leaky1_betas,
+            np.savez_compressed(path, w_scale=w_scale, w_zero_point=w_zero_point, linear1=linear1, leaky1_betas=leaky1_betas,
                                 leaky1_vth=leaky1_vth, linear2=linear2, recurrent_betas=recurrent_betas, recurrent_vth=recurrent_vth,
-                                input_dense=input_dense, activation=activation, output_dense=output_dense,
+                                input_dense=input_dense, activation_betas=activation_betas, activation_vth=activation_vth,output_dense=output_dense,
                                 linear3=linear3, leaky2_betas=leaky2_betas, leaky2_vth=leaky2_vth)
     def from_npz(self, path):
        
         data = np.load(path,allow_pickle=True)
         if self.encoder:
             self.encoder_connection.weight.data = torch.tensor(data['encoder_connection'])
-            self.encoder_population.beta.data = torch.tensor(data['encoder_population_betas'])
+            self.encoder_population.beta.data = torch.tensor(data['encoder_population_betas' ])
             self.encoder_population.threshold.data = torch.tensor(data['encoder_population_vth'])
     
         self.linear1.weight.data = torch.tensor(data['linear1'])
@@ -299,7 +300,7 @@ class QuantAhpcNetwork(nn.Module):
         self.recurrent.beta.data = torch.tensor(data['recurrent_betas'])
         self.recurrent.threshold.data = torch.tensor(data['recurrent_vth'])
 
-        self.recurrent.recurrent.from_npz(data['input_dense'], data['activation'], data['output_dense'])
+        self.recurrent.recurrent.from_npz(data['input_dense'], data['activation_betas'],data['activation_vth'], data['output_dense'])
 
         self.linear3.weight.data = torch.tensor(data['linear3'])
         self.leaky2.beta.data = torch.tensor(data['leaky2_betas'])
