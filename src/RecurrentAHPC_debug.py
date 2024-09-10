@@ -3,7 +3,7 @@ from snntorch._neurons.neurons import _SpikeTensor, _SpikeTorchConv
 import torch.nn as nn
 import brevitas.nn as qnn
 from snntorch.functional import quant
-from brevitas.quant import Int8WeightPerTensorFixedPoint
+from brevitas.quant import Int8WeightPerTensorFixedPoint, Int8ActPerTensorFixedPoint
 import torch 
 import numpy as np
 
@@ -58,11 +58,10 @@ class QuantRecurrentAhpc(snn.RLeaky):
 
         self.back_grad = back_grad if back_grad is not None else spike_grad
 
-        if self.state_quant is not False:
+        if not state_quant:
             self.back_quant = False
-            #self.back_quant = quant.state_quant(num_bits=17, uniform=True, threshold=back_vth)
         else:
-            self.back_quant = False
+            self.back_quant = True
 
         self.alpha = alpha
         self.back_beta = back_beta
@@ -198,19 +197,33 @@ class QuantAhpcBlock(nn.Module):
                                            weight_bit_width=num_bits)
         
         self.dropout = nn.Dropout(dropout)  
-        
-        self.activation = snn.Leaky(beta=beta, 
-                                    spike_grad=grad,
-                                    threshold= vth, 
-                                    learn_threshold=True, 
-                                    learn_beta=True, 
-                                    reset_mechanism='zero',
-                                    reset_delay=False,
-                                    state_quant=state_quant)
+        self.activation_quant = qnn.QuantIdentity(act_quant=Int8ActPerTensorFixedPoint, act_bit_width=16, return_quant_tensor=True)
+        if not state_quant:
+
+            self.activation = snn.Leaky(beta=beta, 
+                                        spike_grad=grad,
+                                        threshold= vth, 
+                                        learn_threshold=True, 
+                                        learn_beta=True, 
+                                        reset_mechanism='zero',
+                                        reset_delay=False)
+        else:
+            activativation_quant = quant.state_quant(num_bits=16, threshold=vth)
+            self.activation = snn.Leaky(beta=beta, 
+                                        spike_grad=grad,
+                                        threshold= vth, 
+                                        learn_threshold=True, 
+                                        learn_beta=True, 
+                                        reset_mechanism='zero',
+                                        reset_delay=False,
+                                        state_quant=activativation_quant)
          
         self.output_dense = qnn.QuantLinear(features, features, bias=False,
                                       weight_quant= shared_weight_quant,
                                       weight_bit_width=num_bits)
+        
+        self.out_quant = qnn.QuantIdentity(act_quant=Int8ActPerTensorFixedPoint, act_bit_width=16, return_quant_tensor=True)
+
         if delay:
             self.features = features
             self.accumulator = torch.zeros((1,features))
@@ -231,21 +244,30 @@ class QuantAhpcBlock(nn.Module):
         else:
             x = self.input_dense(input)
         x = self.dropout(x)
+        x = self.activation_quant(x)
         spk , _ = self.activation(x)
         # if self.features is not None:
         #     out = self.accumulator.to(x.device)
         #     self.accumulator = self.output_dense(spk) 
         # else:
         out = self.output_dense(spk)
+        out = self.out_quant(out)
 
         return out
     
     def to_npz(self):
         input_dense = self.input_dense.weight.detach().cpu().numpy()
+        input_dense_quant = self.input_dense.quant_weight().value.detach().cpu().numpy()
+
         activation_beta = self.activation.beta.data.detach().cpu().numpy()
         activation_vth = self.activation.threshold.data.detach().cpu().numpy()
+
         output_dense = self.output_dense.weight.detach().cpu().numpy()
-        return input_dense, activation_beta, activation_vth, output_dense
+        output_dense_quant = self.output_dense.quant_weight().value.detach().cpu().numpy()
+
+        return input_dense,input_dense_quant, \
+                activation_beta, activation_vth, \
+                output_dense, output_dense_quant
     
     def from_npz(self, input_dense, activation_beta, activation_vth, output_dense):
         
