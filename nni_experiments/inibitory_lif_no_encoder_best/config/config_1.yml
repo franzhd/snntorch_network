@@ -1,0 +1,23 @@
+ 
+experimentName: inibitory_lif_no_encoder_best
+trialConcurrency: 1
+maxExperimentDuration: 72h
+maxTrialNumber: 1000
+trainingService:
+  platform: local
+  useActiveGpu: True
+  maxTrialNumberPerGpu: 4
+searchSpaceFile: ~/snntorch_network/nni_experiments/inibitory_lif_no_encoder_best/search_space/search_space1.json
+useAnnotation: false
+tuner: 
+    name: Anneal
+    classArgs:
+      optimize_mode: maximize
+
+
+trialCodeDirectory: ~/snntorch_network/nni_experiments/inibitory_lif_no_encoder_best/code/
+trialCommand: python3 experiment1.py --trial_path inibitory_lif_no_encoder_best/
+experimentWorkingDirectory: ~/snntorch_network/nni_experiments/inibitory_lif_no_encoder_best/results/
+trialGpuNumber: 1
+
+

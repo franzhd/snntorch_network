@@ -197,7 +197,7 @@ class QuantAhpcBlock(nn.Module):
                                            weight_bit_width=num_bits)
         
         self.dropout = nn.Dropout(dropout)  
-        self.activation_quant = qnn.QuantIdentity(act_quant=Int8ActPerTensorFixedPoint, act_bit_width=16, return_quant_tensor=True)
+        self.activation_quant = qnn.QuantIdentity(act_quant=Int8ActPerTensorFixedPoint, act_bit_width=24, return_quant_tensor=True)
         if not state_quant:
 
             self.activation = snn.Leaky(beta=beta, 
@@ -222,7 +222,7 @@ class QuantAhpcBlock(nn.Module):
                                       weight_quant= shared_weight_quant,
                                       weight_bit_width=num_bits)
         
-        self.out_quant = qnn.QuantIdentity(act_quant=Int8ActPerTensorFixedPoint, act_bit_width=16, return_quant_tensor=True)
+        self.out_quant = qnn.QuantIdentity(act_quant=Int8ActPerTensorFixedPoint, act_bit_width=24, return_quant_tensor=True)
 
         if delay:
             self.features = features
