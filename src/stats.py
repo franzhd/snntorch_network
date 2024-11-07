@@ -53,6 +53,7 @@ class LearningStat:
     def loss(self):
         """Current loss."""
         if self.num_samples > 0:
+
             return self.loss_sum / self.num_samples
         else:
             return None
@@ -61,7 +62,8 @@ class LearningStat:
     def accuracy(self):
         """Current accuracy."""
         if self.num_samples > 0:
-            return self.correct_samples / self.num_samples
+            return round(self.correct_samples / self.num_samples, 5)
+            #return self.correct_samples / self.num_samples
         else:
             return None
 
