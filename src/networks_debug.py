@@ -246,21 +246,25 @@ class QuantAhpcNetwork(nn.Module):
         yy[yy < 0.01] = 0.1
         return yy
     
-
+        
     def save_to_npz(self, path):
         
         w_scale = self.linear1.quant_weight_scale().detach().cpu().numpy()
         w_zero_point = self.linear1.quant_weight_zero_point().detach().cpu().numpy()
+
         linear1 = self.linear1.weight.data.detach().cpu().numpy()
+        linear1_quant = self.linear1.quant_weight().int().detach().cpu().numpy()
         leaky1_betas = self.leaky1.beta.data.detach().cpu().numpy()
         leaky1_vth = self.leaky1.threshold.data.detach().cpu().numpy()
         linear2 = self.linear2.weight.data.detach().cpu().numpy()
+        linear2_quant = self.linear2.quant_weight().int().detach().cpu().numpy()
 
         recurrent_betas = self.recurrent.beta.data.detach().cpu().numpy()
         recurrent_vth = self.recurrent.threshold.data.detach().cpu().numpy()
-        input_dense, activation_betas, activation_vth, output_dense = self.recurrent.recurrent.to_npz()
+        input_dense, input_dense_quant, activation_betas, activation_vth, output_dense, output_dense_quant = self.recurrent.recurrent.to_npz()
 
         linear3 = self.linear3.weight.data.detach().cpu().numpy()
+        linear3_quant = self.linear3.quant_weight().int().detach().cpu().numpy()
         leaky2_betas = self.leaky2.beta.data.detach().cpu().numpy()
         leaky2_vth = self.leaky2.threshold.data.detach().cpu().numpy()
 
@@ -269,16 +273,27 @@ class QuantAhpcNetwork(nn.Module):
             encoder_population_betas = self.encoder_population.beta.data.detach().cpu().numpy()
             encoder_population_vth = self.encoder_population.threshold.data.detach().cpu().numpy()
             
-            np.savez_compressed(path,w_scale=w_scale, w_zero_point=w_zero_point, encoder_connection=encoder_connection, encoder_population_betas=encoder_population_betas,
-                                encoder_population_vth=encoder_population_vth, linear1=linear1, leaky1_betas=leaky1_betas,
-                                leaky1_vth=leaky1_vth, linear2=linear2, recurrent_betas=recurrent_betas, recurrent_vth=recurrent_vth,
-                                input_dense=input_dense, activation_betas=activation_betas,activation_vth=activation_vth, output_dense=output_dense,
-                                linear3=linear3, leaky2_betas=leaky2_betas, leaky2_vth=leaky2_vth)
+            # np.savez_compressed(path,w_scale=w_scale, w_zero_point=w_zero_point, encoder_connection=encoder_connection, encoder_population_betas=encoder_population_betas,
+            #                     encoder_population_vth=encoder_population_vth, linear1=linear1, leaky1_betas=leaky1_betas,
+            #                     leaky1_vth=leaky1_vth, linear2=linear2, recurrent_betas=recurrent_betas, recurrent_vth=recurrent_vth,
+            #                     input_dense=input_dense, activation_betas=activation_betas,activation_vth=activation_vth, output_dense=output_dense,
+            #                     linear3=linear3, leaky2_betas=leaky2_betas, leaky2_vth=leaky2_vth)
+            np.savez_compressed(path, w_scale=w_scale, w_zero_point=w_zero_point, encoder_connection=encoder_connection, encoder_population_betas=encoder_population_betas,
+                                encoder_population_vth=encoder_population_vth, linear1=linear1, linear1_quant=linear1_quant, leaky1_betas=leaky1_betas,
+                                leaky1_vth=leaky1_vth, linear2=linear2, linear2_quant=linear2_quant, recurrent_betas=recurrent_betas, recurrent_vth=recurrent_vth,
+                                input_dense=input_dense, input_dense_quant=input_dense_quant, activation_betas=activation_betas, activation_vth=activation_vth,output_dense=output_dense,
+                                output_dense_quant=output_dense_quant, linear3=linear3, linear3_quant=linear3_quant, leaky2_betas=leaky2_betas, leaky2_vth=leaky2_vth)
         else:
-            np.savez_compressed(path, w_scale=w_scale, w_zero_point=w_zero_point, linear1=linear1, leaky1_betas=leaky1_betas,
-                                leaky1_vth=leaky1_vth, linear2=linear2, recurrent_betas=recurrent_betas, recurrent_vth=recurrent_vth,
-                                input_dense=input_dense, activation_betas=activation_betas, activation_vth=activation_vth,output_dense=output_dense,
-                                linear3=linear3, leaky2_betas=leaky2_betas, leaky2_vth=leaky2_vth)
+            # np.savez_compressed(path, w_scale=w_scale, w_zero_point=w_zero_point, linear1=linear1, leaky1_betas=leaky1_betas,
+            #                     leaky1_vth=leaky1_vth, linear2=linear2, recurrent_betas=recurrent_betas, recurrent_vth=recurrent_vth,
+            #                     input_dense=input_dense, activation_betas=activation_betas, activation_vth=activation_vth,output_dense=output_dense,
+            #                     linear3=linear3, leaky2_betas=leaky2_betas, leaky2_vth=leaky2_vth)
+            
+            np.savez_compressed(path, w_scale=w_scale, w_zero_point=w_zero_point, linear1=linear1, linear1_quant=linear1_quant, leaky1_betas=leaky1_betas,
+                                leaky1_vth=leaky1_vth, linear2=linear2, linear2_quant=linear2_quant, recurrent_betas=recurrent_betas, recurrent_vth=recurrent_vth,
+                                input_dense=input_dense, input_dense_quant=input_dense_quant, activation_betas=activation_betas, activation_vth=activation_vth,output_dense=output_dense,
+                                output_dense_quant=output_dense_quant, linear3=linear3, linear3_quant=linear3_quant, leaky2_betas=leaky2_betas, leaky2_vth=leaky2_vth)
+
     def from_npz(self, path):
        
         data = np.load(path,allow_pickle=True)
