@@ -1,0 +1,46 @@
+ 
+experimentName: inibitory_lif_no_encoder_balanced_no_net_loss
+trialConcurrency: 1
+maxExperimentDuration: 72h
+maxTrialNumber: 1000
+trainingService:
+  platform: local
+  useActiveGpu: True
+  maxTrialNumberPerGpu: 4
+searchSpaceFile: ~/snntorch_network/nni_experiments/inibitory_lif_no_encoder_balanced_no_net_loss/search_space/search_space1.json
+useAnnotation: false
+tuner: 
+    name: Anneal
+    classArgs:
+      optimize_mode: maximize
+
+
+trialCodeDirectory: ~/snntorch_network/nni_experiments/inibitory_lif_no_encoder_balanced_no_net_loss/code/
+trialCommand: python3 experiment1.py --trial_path inibitory_lif_no_encoder_balanced_no_net_loss/
+experimentWorkingDirectory: ~/snntorch_network/nni_experiments/inibitory_lif_no_encoder_balanced_no_net_loss/results/
+trialGpuNumber: 1
+
+
+ 
+experimentName: inibitory_lif_no_encoder_balanced_no_net_loss
+trialConcurrency: 1
+maxExperimentDuration: 72h
+maxTrialNumber: 1000
+trainingService:
+  platform: local
+  useActiveGpu: True
+  maxTrialNumberPerGpu: 4
+searchSpaceFile: ~/snntorch_network/nni_experiments/inibitory_lif_no_encoder_balanced_no_net_loss/search_space/search_space1.json
+useAnnotation: false
+tuner: 
+    name: Anneal
+    classArgs:
+      optimize_mode: maximize
+
+
+trialCodeDirectory: ~/snntorch_network/nni_experiments/inibitory_lif_no_encoder_balanced_no_net_loss/code/
+trialCommand: python3 experiment1.py --trial_path inibitory_lif_no_encoder_balanced_no_net_loss/
+experimentWorkingDirectory: ~/snntorch_network/nni_experiments/inibitory_lif_no_encoder_balanced_no_net_loss/results/
+trialGpuNumber: 1
+
+

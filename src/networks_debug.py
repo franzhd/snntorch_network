@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from snntorch import functional as SF
 from snntorch.functional import quant
 from RecurrentAHPC_debug import QuantRecurrentAhpc
+from brevitas.quant import Int8WeightPerTensorFixedPoint
 import numpy as np
 
 def state_quant_fn(input_, num_bits=8, threshold=1, lower_limit=0, upper_limit=0.2): # <-- VitF
@@ -58,7 +59,8 @@ class QuantAhpcNetwork(nn.Module):
                 state_quant=False,
                 time_dim=1,
                 num_bits=8,
-                layer_loss=None):
+                layer_loss=None,
+                weight_quant=Int8WeightPerTensorFixedPoint):
         
         super(QuantAhpcNetwork, self).__init__()
         self.layer_loss = layer_loss
@@ -89,7 +91,7 @@ class QuantAhpcNetwork(nn.Module):
         else:
             self.encoder = False
             self.linear1 = qnn.QuantLinear(num_inputs, num_hidden_1, bias=False,
-                                           weight_bit_width=num_bits)
+                                           weight_bit_width=num_bits, weight_quant=weight_quant) 
 
            
 
