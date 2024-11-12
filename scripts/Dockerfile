@@ -54,7 +54,7 @@ RUN /opt/conda/bin/python3 -m pip install --upgrade pip
 
 RUN pip3 install git+https://github.com/jeshraghian/snntorch@40ad1360c644f948889cb9610121397c6ce943c8
 
-RUN python3 -m pip install --no-cache-dir nni==2.7 tqdm "typeguard<3" filelock==3.10 jupyterlab notebook ipywidgets seaborn matplotlib scikit-learn tabulate brevitas==o.10.2 tqdm pandas scipy
+RUN python3 -m pip install --no-cache-dir nni==2.7 tqdm "typeguard<3" filelock==3.10 jupyterlab notebook ipywidgets seaborn matplotlib scikit-learn tabulate brevitas==0.10.2 tqdm pandas scipy
 
 
     
