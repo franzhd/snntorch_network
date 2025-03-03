@@ -188,7 +188,7 @@ class QuantRecurrentAhpc(snn.RLeaky):
 
 
 class QuantAhpcBlock(nn.Module):
-    def __init__(self, beta, vth, grad, features, shared_weight_quant, num_bits=8, state_quant=False, dropout=0.0, delay=True):
+    def __init__(self, beta, vth, grad, features, shared_weight_quant, num_bits=8, state_quant=False, dropout=0.0, delay=False):
 
         super(QuantAhpcBlock, self).__init__()
         

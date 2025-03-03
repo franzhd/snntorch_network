@@ -87,7 +87,7 @@ class QuantAhpcNetwork(nn.Module):
                                     reset_delay=False)
             
             self.linear1 = qnn.QuantLinear(encoder_dim, num_hidden_1, bias=False,
-                                           weight_bit_width=num_bits)
+                                       weight_bit_width=num_bits)
         else:
             self.encoder = False
             self.linear1 = qnn.QuantLinear(num_inputs, num_hidden_1, bias=False,
@@ -107,7 +107,7 @@ class QuantAhpcNetwork(nn.Module):
         self.linear2 = qnn.QuantLinear(num_hidden_1, num_hidden_2, bias=False,
                                         weight_bit_width=num_bits,
                                         weight_quant=  self.linear1.weight_quant)
-        
+        print(f"type of self.linear2 is {type(self.linear2)}")
         self.dropout_rec = nn.Dropout(p=drop_recurrent)  
 
         self.recurrent = QuantRecurrentAhpc(beta_recurrent, beta_back, vth_back, spike_grad=grad, linear_features = num_hidden_2,
@@ -140,11 +140,16 @@ class QuantAhpcNetwork(nn.Module):
         self.recurrent.reset_hidden()
         self.leaky2.reset_hidden()
         rspk, rmem = self.recurrent.init_rleaky()
-        dims = list(range(data.dim()))  # Creates a list of dimensions
-        dims.pop(self.time_dim)                     # Remove the selected dimension
-        dims.insert(0, self.time_dim)               # Insert the selected dimension at the front
-        data_permuted = data.permute(dims)  # Permute the tensor
-        
+
+        if self.time_dim is not None:
+            dims = list(range(data.dim()))  # Creates a list of dimensions
+            #print(dims)
+            dims.pop(self.time_dim)                     # Remove the selected dimension
+            dims.insert(0, self.time_dim)               # Insert the selected dimension at the front
+            data_permuted = data.permute(dims)  # Permute the tensor
+        else:
+            data_permuted = data
+             
         if self.layer_loss is not None:
         
             if self.encoder:
@@ -193,7 +198,6 @@ class QuantAhpcNetwork(nn.Module):
             x, _ = self.leaky2(x)
             
             spk_rec.append(x)
-
         batch_out = torch.stack(spk_rec)
 
         if self.layer_loss is not None:

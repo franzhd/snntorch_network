@@ -264,7 +264,7 @@ class WisdmDataset(Dataset):
         return x, y
 
     def __len__(self):
-        return self.y.size
+        return self.y.shape[0]
 
 
 # class To_spike(object): #discretization
