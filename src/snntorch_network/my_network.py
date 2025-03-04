@@ -8,47 +8,11 @@ from snntorch import surrogate
 import torch.nn.functional as F
 from snntorch import functional as SF
 from snntorch.functional import quant
-from RecurrentAHPC_debug import QuantRecurrentAhpc
+from snntorch_network.RecurrentBlock import QuantRecurrentBlock
 from brevitas.quant import Int8WeightPerTensorFixedPoint
 import numpy as np
 
-def state_quant_fn(input_, num_bits=8, threshold=1, lower_limit=0, upper_limit=0.2): # <-- VitF
-
-    num_levels = 2 << num_bits - 1
-
-    levels = torch.linspace(
-                threshold - threshold * lower_limit,
-                threshold + threshold * upper_limit,
-                num_levels,
-             )
-    
-    device = input_.device
-    levels = levels.to(device)
-
-    """
-    # The original implementation
-
-    size = input_.size()
-    input_ = input_.flatten()
-    # Broadcast mem along new direction same # of times as num_levels
-    repeat_dims = torch.ones(len(input_.size())).tolist()
-    repeat_dims.append(levels.shape[0]) # .append(len(levels))
-    repeat_dims = [int(item) for item in repeat_dims]
-    repeat_dims = tuple(repeat_dims)
-    input_ = input_.unsqueeze(-1).repeat(repeat_dims)
-    # find closest valid quant state
-    idx_match = torch.min(torch.abs(levels - input_), dim=-1)[1]
-    quant_tensor = levels[idx_match]
-    
-    return quant_tensor.reshape(size)
-    """
-
-    differences = torch.abs(input_.unsqueeze(-1) - levels)
-    closest_indices = torch.argmin(differences, dim=-1)
-    
-    return levels[closest_indices]
-    
-class QuantAhpcNetwork(nn.Module):
+class ExInbitoryNetwork(nn.Module):
     def __init__(self,
                 num_inputs, num_hidden_1, num_hidden_2, num_outputs,
                 grad,
@@ -62,7 +26,7 @@ class QuantAhpcNetwork(nn.Module):
                 layer_loss=None,
                 weight_quant=Int8WeightPerTensorFixedPoint):
         
-        super(QuantAhpcNetwork, self).__init__()
+        super(ExInbitoryNetwork, self).__init__()
         self.layer_loss = layer_loss
 
         self.time_dim = time_dim
@@ -110,7 +74,7 @@ class QuantAhpcNetwork(nn.Module):
         print(f"type of self.linear2 is {type(self.linear2)}")
         self.dropout_rec = nn.Dropout(p=drop_recurrent)  
 
-        self.recurrent = QuantRecurrentAhpc(beta_recurrent, beta_back, vth_back, spike_grad=grad, linear_features = num_hidden_2,
+        self.recurrent = QuantRecurrentBlock(beta_recurrent, beta_back, vth_back, spike_grad=grad, linear_features = num_hidden_2,
                                             init_hidden=False, reset_delay=False, learn_beta=True,
                                             learn_threshold=True, learn_recurrent=True, 
                                             threshold=vth_recurrent, reset_mechanism="zero",

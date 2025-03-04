@@ -5,9 +5,8 @@ import brevitas.nn as qnn
 from snntorch.functional import quant
 from brevitas.quant import Int8WeightPerTensorFixedPoint, Int8ActPerTensorFixedPoint
 import torch 
-import numpy as np
 
-class QuantRecurrentAhpc(snn.RLeaky):
+class QuantRecurrentBlock(snn.RLeaky):
 
     def __init__(
         self,
@@ -35,7 +34,7 @@ class QuantRecurrentAhpc(snn.RLeaky):
         
     ):
         
-        super(QuantRecurrentAhpc, self).__init__(
+        super(QuantRecurrentBlock, self).__init__(
             beta=beta,
             all_to_all=True,
             linear_features=linear_features,
@@ -74,7 +73,7 @@ class QuantRecurrentAhpc(snn.RLeaky):
 
         
     def overwrite_self_recurrent(self):
-        self.recurrent = QuantAhpcBlock(self.back_beta,
+        self.recurrent = QuantInibitoryBlock(self.back_beta,
                                         self.back_vth, 
                                         self.back_grad, 
                                         self.linear_features, 
@@ -187,10 +186,10 @@ class QuantRecurrentAhpc(snn.RLeaky):
 
 
 
-class QuantAhpcBlock(nn.Module):
+class QuantInibitoryBlock(nn.Module):
     def __init__(self, beta, vth, grad, features, shared_weight_quant, num_bits=8, state_quant=False, dropout=0.0, delay=False):
 
-        super(QuantAhpcBlock, self).__init__()
+        super(QuantInibitoryBlock, self).__init__()
         
         self.input_dense = qnn.QuantLinear(features, features, bias=False,
                                            weight_quant= shared_weight_quant,

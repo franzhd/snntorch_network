@@ -13,7 +13,7 @@ from snntorch import functional as SF
 sys.path.insert(0, '../../../src/')
 from dataloader import *
 from utils import *
-from networks import *
+from networks_old import *
 from assistant import Assistant
 from stats import LearningStats
 
@@ -47,7 +47,7 @@ def main():
 
     grad = surrogate.fast_sigmoid(params['slope']) #use slope for HPO
 
-    net = QuantAhpcNetwork(NET_INPUT_DIM, int(params['net_hidden_1']), int(params['net_hidden_2']),
+    net = ExInbitoryNetwork(NET_INPUT_DIM, int(params['net_hidden_1']), int(params['net_hidden_2']),
                       NET_OUTPUT_DIM, params['beta'],grad, params['threshold'], back_beta=params['back_beta']).to(device)
     
     optimizer = torch.optim.Adam(net.parameters(), lr=params['lr'], betas=(0.9, 0.999))

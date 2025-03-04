@@ -16,7 +16,7 @@ from snntorch import functional as SF
 sys.path.insert(0, '../../../src/')
 from dataloader import *
 from utils import *
-from networks_debug import *
+from my_network import *
 from assistant import Assistant
 from stats import LearningStats
 def main():
@@ -57,7 +57,7 @@ def main():
 
     grad = surrogate.fast_sigmoid(params['slope']) #use slope for HPO
 
-    net = QuantAhpcNetwork(NET_INPUT_DIM, int(params['net_hidden_1']), int(params['net_hidden_2']), NET_OUTPUT_DIM, grad,
+    net = ExInbitoryNetwork(NET_INPUT_DIM, int(params['net_hidden_1']), int(params['net_hidden_2']), NET_OUTPUT_DIM, grad,
                         vth_in=params['vth_in'], vth_recurrent=params['vth_recurrent'], vth_out=params['vth_out'],
                         beta_in=params['beta_in'], beta_recurrent=params['beta_recurrent'], beta_back=params['beta_back'], beta_out=params['beta_out'],
                         encoder_dim=int(params['encoder_dim']),
