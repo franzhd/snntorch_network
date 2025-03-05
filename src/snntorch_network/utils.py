@@ -1,24 +1,24 @@
 import os
 import sys
-from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-#import lava.lib.dl.slayer as slayer
 import seaborn as sns 
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, mean_squared_error
 import matplotlib.pyplot as plt
-import statistics
-import csv
 import itertools
-import datetime as dt
-from datetime import datetime
 import json
-import random as rn
 import pandas as pd
-import seaborn as sn
 #from keras.utils import to_categorical
+
+
+import re
+import matplotlib.image as mpimg
+from IPython.display import HTML, display
+from tabulate import tabulate
+import sqlite3
+
 
 from sklearn.model_selection import train_test_split
 
@@ -422,3 +422,373 @@ def WisdmDf2Np(path,save_path, time_window=2, overlap =0, subset=0):
 
 def one_hot_encode(labels, num_classes):
     return np.eye(num_classes)[labels]
+
+
+
+def merge_dicts(dict1, dict2)-> dict:
+    merged_dict = {}
+    for key in dict1.keys():
+        merged_dict[key] = [dict1[key], dict2[key]]
+    #print(merged_dict)
+    return merged_dict
+
+
+def nni_query(tiral_sqlite_path, show=True) -> dict:
+
+    # Connect to the SQLite database
+    connection = sqlite3.connect(tiral_sqlite_path)
+    cursor = connection.cursor()
+
+    query = f"""
+        SELECT trialjobId, sequence, data
+        FROM MetricData
+        WHERE trialjobId IN (
+            SELECT trialjobId
+            FROM MetricData
+            WHERE type = 'FINAL'
+            GROUP BY trialjobId
+            ORDER BY data DESC
+            LIMIT 5
+        ) 
+        AND type = 'PERIODICAL'
+        ORDER BY trialjobId, sequence;
+    """
+
+
+    # Execute the query
+    cursor.execute(query)
+
+    # Fetch the results
+    results = cursor.fetchall()
+    print(results)
+    score_dict = {}
+    if len(results) == 0:
+        print('NO METRICS FOUND')
+        return
+    if "{" not in results[0][2]:
+        
+        print("found single Score")
+        query = """
+                UPDATE MetricData
+                SET data = replace(data, '"', '');
+                """
+        
+        cursor.execute(query)
+        connection.commit()
+
+        query = f"""
+                SELECT
+                    trialjobId,
+                    sequence,
+                    CAST(data AS REAL) AS d,
+                    MAX(CAST(data AS REAL)) OVER (PARTITION BY trialjobId) AS max_data
+                FROM MetricData
+                WHERE trialjobId IN (
+                    SELECT trialjobId
+                    FROM MetricData
+                    WHERE type = 'FINAL'
+                    GROUP BY trialjobId
+                    ORDER BY CAST(data AS REAL) DESC
+                    LIMIT 5
+                ) AND type = 'PERIODICAL'
+                ORDER BY  max_data DESC,trialjobId,sequence;
+                """
+            # Execute the query
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        query = f"""
+                UPDATE MetricData
+                SET data = '"' || data || '"'
+                WHERE data IS NOT NULL;
+                """
+        cursor.execute(query)
+        connection.commit()
+    else:
+        print("found multiple metrics, tracking only default")
+        query = f"""
+                UPDATE MetricData
+                SET data = replace(data, '\\"', '"');
+                """
+        cursor.execute(query)
+        connection.commit()
+        query = f"""
+                UPDATE MetricData
+                SET data = replace(data, '"{{', '{{');
+                """
+        cursor.execute(query)
+        connection.commit()
+        query = f"""
+                UPDATE MetricData
+                SET data = replace(data, '}}"', '}}');
+            """
+        
+        cursor.execute(query)
+        connection.commit()
+        query = f"""
+                SELECT trialjobId,
+                        sequence,
+                        CAST(JSON_EXTRACT(data, '$.default') AS REAL) as metrics,
+                        MAX(CAST(JSON_EXTRACT(data, '$.default') AS REAL)) OVER (PARTITION BY trialjobId) AS max_data
+                FROM MetricData
+                WHERE trialjobId IN (
+                    SELECT trialjobId
+                    FROM MetricData
+                    WHERE type = 'FINAL'
+                    GROUP BY trialjobId
+                    ORDER BY MAX(CAST(JSON_EXTRACT(data, '$.default') AS REAL)) DESC
+                    LIMIT 5
+                ) 
+                AND type = 'PERIODICAL'
+                ORDER BY max_data DESC, trialjobId, sequence;
+            """
+        
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        query = f"""
+                UPDATE MetricData
+                SET data = replace(data, '"', '\\"');
+                """
+        cursor.execute(query)
+        connection.commit()
+        query = f"""
+                UPDATE MetricData
+                SET data = replace(data, '{{', '"{{');
+                """
+        cursor.execute(query)
+        connection.commit()
+        query = f"""
+                UPDATE MetricData
+                SET data = replace(data, '}}', '}}"');
+            """
+        
+        cursor.execute(query)
+        connection.commit()
+            
+                # Execute the query
+
+
+    # Fetch the results
+    #print(results)
+    for row in results:
+        trialjob_id = row[0]
+        sequence = row[1]
+
+    # If trialjob_id is not already in the dictionary, add it with an empty list
+        if trialjob_id not in score_dict:
+            score_dict[trialjob_id] = []
+
+        # Append the data to the list, maintaining the order by sequence
+        score_dict[trialjob_id].append(row[2])
+    #print('score dict', score_dict)
+    query2 = f"""
+            SELECT trialjobId, data
+            FROM TrialJobEvent
+            WHERE event = 'WAITING'
+            AND trialjobId IN ({', '.join('?' for _ in score_dict.keys())});
+            """ 
+    cursor.execute(query2, list(score_dict.keys()))
+    results2 = cursor.fetchall()
+    connection.close()
+
+    params_dict = {}
+    for row in results2:
+        trialjob_id = row[0]
+        parameters = json.loads(row[1])
+        # If trialjob_id is not already in the dictionary, add it with an empty list
+        if trialjob_id not in params_dict:
+        # Append the data to the list, maintaining the order by sequence
+            params_dict[trialjob_id] = (parameters['parameters'])
+
+    merged_dict = merge_dicts(score_dict, params_dict)  
+    
+    if show == True:
+        
+        values = next(iter(merged_dict.values()))
+        header = [['Trials Name'] + list(values[1].keys()) + ['Score']]
+        plt.figure(figsize=(15, 10))
+        
+        for key, value in merged_dict.items():
+            
+            plt.plot(range(len(value[0])), value[0], label=f'{key}, best:{max(value[0]):.4f}')
+            rows = [key] + list(value[1].values()) + [max(value[0])]
+            header.append(rows)
+        plt.legend()
+        plt.show()
+        
+        print(tabulate(header, headers='firstrow', tablefmt='grid'))    
+
+    return merged_dict
+
+
+def show_results(path, experiment_code=None, print_content=False):
+
+    if os.path.isdir(path):
+            # Ottieni la lista di tutti i file e le directory nel path
+            if experiment_code is None:
+                dir_content = os.listdir(path)
+            else:
+                dir_content = [experiment_code]
+            
+            # Scansiona tutti gli elementi nel path
+            for element in dir_content:
+                print(f'experiment codename {element}')
+                db_path = os.path.join(path, element,'db/nni.sqlite')
+                print('experiment folder', os.path.join(path, element))
+                if os.path.isfile(db_path):
+                    experimet_best_dict = nni_query(db_path, show=True)
+                    if experimet_best_dict is not None and print_content == True:
+                        for trial in experimet_best_dict.keys(): 
+                            loss_trial_path = os.path.join(path, element,'trials', trial, 'Trained/loss.txt')
+                            data = np.loadtxt(loss_trial_path, skiprows=1)
+                            plt.figure(figsize=(15, 10))
+                            plt.plot(range(len(data[:,0])), data[:,0], label='train')
+                            plt.plot(range(len(data[:,1])), data[:,1], label='test')
+                            plt.legend()
+                            plt.title(f'{trial} loss graph')
+                            plt.show()
+                            image_path = os.path.join(path, element,'trials', trial, 'Trained/confusion_matrix.png')
+                            img = mpimg.imread(image_path)
+
+                            # Visualizza l'immagine
+                            plt.imshow(img)
+                            plt.show()                        
+                            gif_path = os.path.join(path, element,'trials', trial, 'gifs')
+                            if not os.path.exists(gif_path):
+                                print("The gif_path does not exist.")
+                            else:
+                                gifs_names= os.listdir(gif_path)
+                                if len(gifs_names) > 0 :
+                                    end_char = '.gif'
+                                    start_char = '_label'
+
+                                    gif_td = lambda gif: f'<td> <img src="{gif}" alt="Drawing" style="height: 300px;"/> </td>'
+                                    html = '<table>'
+                                    html += '<tr><td align="center"><b>Input</b></td><td><b>Output</b></td></tr>'
+                                    for i in range(5):
+                                        pattern1 = re.compile(f'^inp{re.escape(str(i))}_.*\.gif$')
+                                        pattern2 = re.compile(f'^out{re.escape(str(i))}_.*\.gif$')
+                                        pattern3 = re.compile(f'{re.escape(start_char)}(.*?){re.escape(end_char)}')
+                                        try:
+                                            image_name1 =  [file for file in gifs_names if pattern1.match(file)][0]
+                                            image_name2 =  [file for file in gifs_names if pattern2.match(file)][0]
+                                            label = pattern3.search(image_name1).group(1)
+                                            image_path1 = os.path.join(gif_path, image_name1)
+                                            image_path2 = os.path.join(gif_path, image_name2)
+                                        except:
+                                            print("found error in gifs names")
+                                        
+                                        html += '<tr>'
+                                        html += f'<td><b>Label: {label}</b></td>'
+                                        html += gif_td(image_path1)
+                                        html += gif_td(image_path2)
+                                        html += '</tr>'
+                                    html += '</table>'
+                                    display(HTML(html))
+
+                else:
+                    print('no database file found in the experiment gfolder \n')               
+    else:           
+        print(f"given path is not a directory: {path}")
+
+#### given the modularity of the saving, modular finction defined by the user
+
+
+def extract_strings_at_indices(indices, strings, print_output=False):
+    extracted_strings = [strings[idx] for idx in indices]
+    if print_output:
+        print(extracted_strings)
+    return extracted_strings
+
+def json_to_vector(json_file):
+    with open(json_file, 'r') as file:
+        data = json.load(file)
+    vector = []
+    for value in data:
+        vector.append(value)
+    return vector
+
+
+def MseScore_plot(combination, distance_matrix, plot=False):
+    distances = distance_matrix[np.ix_(combination, combination)]
+    sum_score = sum(distances.flatten())/2
+    distances_distribution = distances.flatten()
+    distances_distribution /= np.sum(distances_distribution)  # Normalize the distribution
+    uniform_distribution = np.full_like(distances_distribution, 1 / len(distances_distribution))
+    mse = mean_squared_error(distances_distribution, uniform_distribution)
+    distances_distribution = distances_distribution[distances_distribution != 0]  # Remove zeros
+    uniform_distribution = np.full_like(distances_distribution, 1 / len(distances_distribution))
+    
+    if plot:
+        plt.figure(figsize=(10, 6))
+        plt.plot(distances_distribution, label='Distance Distribution')
+        plt.plot(uniform_distribution, label='Uniform Distribution', linestyle='--')
+        
+        # Highlight the moving range with dotted lines
+        plt.fill_between(range(len(distances_distribution)), distances_distribution, uniform_distribution, color='gray', alpha=0.2, linestyle=':')
+        
+        # Calculate and plot the range amplitude
+        range_amplitude = distances_distribution.max() - distances_distribution.min()
+        plt.axhline(y=distances_distribution.max(), color='r', linestyle=':', label='Max Amplitude')
+        plt.axhline(y=distances_distribution.min(), color='b', linestyle=':', label='Min Amplitude')
+        plt.title(f'Distance Distribution vs Uniform Distribution\nMSE: {mse:.3e}, Sum:{sum_score:.2f}, Amplitude: {range_amplitude:.6f}')
+        plt.xlabel('Index')
+        plt.ylabel('Value')
+        plt.ylim(0, 0.055)  # Set y-axis range
+        plt.legend()
+        plt.show()
+
+
+def calculate_separability_scores_v2(distance_matrix, num_classes, n):
+    class_combinations = itertools.combinations(range(num_classes), n)
+    separability_scores = []
+    print("Calculating final separability scores...")
+    for combination in tqdm(class_combinations, desc="Combinations"):
+        distances = distance_matrix[np.ix_(combination, combination)]
+        median_distance = np.median(distances.flatten())
+        
+        # Calculate the distances distributionsdsdsfdsfsdfsdfsdfdsfdsfdsewrewrwerewr234234234234234              
+        distances_distribution = distances.flatten()
+        distances_distribution /= np.sum(distances_distribution)  # Normalize the distribution
+        
+        # Calculate the uniform distribution
+        uniform_distribution = np.full_like(distances_distribution, 1 / len(distances_distribution))
+        
+        # Calculate the mse between the distributions 
+        mse = mean_squared_error(distances_distribution, uniform_distribution)
+        score = calculate_separability_score(combination, distance_matrix)
+        separability_scores.append((combination, score, median_distance, mse))
+    
+    separability_scores.sort(key=lambda x: x[1], reverse=True)
+    
+    top_combinations = separability_scores[:10]
+    for comb, score, median_dist, mse in top_combinations:
+        print(f"Combination: {comb}, Score: {score}, Median Distance: {median_dist}, mse: {mse}")
+    
+    return separability_scores
+
+def search_combination(separability_scores, combination):
+
+    for comb, score, median_dist, mse in separability_scores:
+        if comb == combination:
+            print(f"Combination: {comb}, Score: {score}, Median Distance: {median_dist}, mse: {mse}")
+            break
+    else:
+        print("Combination not found in separability scores.")
+
+
+def standardize_scores_range(separability_scores):
+    score_sum = [x[1] for x in separability_scores]
+    score_mse = [x[3] for x in separability_scores]
+    separability_tmp = [list(x) for x in separability_scores]
+    sum_max = max(score_sum)
+    sum_min = min(score_sum)
+    mse_max = max(score_mse)
+    mse_min = min(score_mse)
+    for i in range(len(separability_tmp)):
+        sum_norm = (separability_tmp[i][1] - sum_min) / (sum_max - sum_min)
+        mse_norm = (separability_tmp[i][3] - mse_min) / (mse_max - mse_min)
+        separability_tmp[i][1] = sum_norm
+        separability_tmp[i][3] = mse_norm
+    return separability_tmp

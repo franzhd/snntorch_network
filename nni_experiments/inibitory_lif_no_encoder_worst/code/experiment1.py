@@ -13,12 +13,11 @@ from torch.utils.data import  DataLoader
 from snntorch import surrogate
 from snntorch import functional as SF
 
-sys.path.insert(0, '../../../src/')
-from dataloader import *
-from utils import *
-from my_network import *
-from assistant import Assistant
-from stats import LearningStats
+from snntorch_network.dataloader import *
+from snntorch_network.utils import *
+from snntorch_network.my_network import *
+from snntorch_network.assistant import Assistant
+from snntorch_network.stats import LearningStats
 def main():
 
     parser = argparse.ArgumentParser()
