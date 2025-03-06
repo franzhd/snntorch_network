@@ -1,0 +1,48 @@
+[project]
+name = "snntorch_network"
+version = "0.1.0"
+description = "Package used for training a spiking neural network that will be robust to snntorch porting"
+authors = [
+    {name = "Francesco Guarino", email = "francesco.guarino@polito.it"},
+]
+requires-python = ">=3.10"
+readme = "README.md"
+license = {text = "MIT"}
+dependencies = [
+    "snntorch @ git+https://github.com/jeshraghian/snntorch@40ad1360c644f948889cb9610121397c6ce943c8",
+    "numpy>=1.22.0",
+    "matplotlib>=3.5.0",
+    "tqdm>=4.62.0",
+    "pandas>=1.4.0",
+    "scipy>=1.8.0",
+    # Hyperparameter optimization
+    "nni==2.7",
+    "typeguard<3",
+    "filelock==3.10",
+    # Jupyter tools
+    "jupyterlab",
+    "notebook",
+    "ipywidgets",
+    # Data visualization & analysis
+    "seaborn",
+    "scikit-learn",
+    "tabulate",
+    # Neural network quantization
+    "brevitas==0.10.2",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["snntorch_network"]
+
+[tool.setuptools.package-dir]
+"snntorch_network" = "src/snntorch_network"
+
+[tool.setuptools.package-data]
+"*" = ["py.typed"]
+
+[tool.pdm]
+distribution = true

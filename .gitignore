@@ -5,7 +5,6 @@ nni_experiments/*/results/*
 nni_experiments/*.tar.gz
 notebook/*
 !notebook/*.ipynb
-/*
 !nni_experiments
 !notebook
 !src
