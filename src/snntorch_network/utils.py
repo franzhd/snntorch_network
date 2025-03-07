@@ -335,9 +335,7 @@ def WisdmDf2Np(path,save_path, time_window=2, overlap =0, subset=0):
     # 50% overlap has been used for the whole dataset (subset=0) to compare with baseline results of paper "A deep learning approach for human activities recognition from multimodal sensing devices"
     #overlap  overlapping fraction (FRACTION with respect to unity, NOT PERCENTAGE)
     #subset  use 0 to select all of the 18 activities
-    ##################################################################
-
-    # activities re-ordered according to non-hand, hand general and hand eating subsets
+    ##################################################################  # activities re-ordered according to non-hand, hand general and hand eating subsets
     act_map = {
         'A': 'walking',
         'B': 'jogging',
@@ -640,7 +638,7 @@ def show_results(path, experiment_code=None, print_content=False):
                     experimet_best_dict = nni_query(db_path, show=True)
                     if experimet_best_dict is not None and print_content == True:
                         for trial in experimet_best_dict.keys(): 
-                            loss_trial_path = os.path.join(path, element,'trials', trial, 'Trained/loss.txt')
+                            loss_trial_path = os.path.join(path, element,'environments/local-env/trials/', trial, 'Trained/loss.txt')
                             data = np.loadtxt(loss_trial_path, skiprows=1)
                             plt.figure(figsize=(15, 10))
                             plt.plot(range(len(data[:,0])), data[:,0], label='train')
