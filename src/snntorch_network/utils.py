@@ -427,7 +427,7 @@ def merge_dicts(dict1, dict2)-> dict:
     merged_dict = {}
     for key in dict1.keys():
         merged_dict[key] = [dict1[key], dict2[key]]
-    #print(merged_dict)
+    print(merged_dict)
     return merged_dict
 
 
@@ -583,7 +583,7 @@ def nni_query(tiral_sqlite_path, show=True) -> dict:
     query2 = f"""
             SELECT trialjobId, data
             FROM TrialJobEvent
-            WHERE event = 'WAITING'
+            WHERE event = 'RUNNING'
             AND trialjobId IN ({', '.join('?' for _ in score_dict.keys())});
             """ 
     cursor.execute(query2, list(score_dict.keys()))
@@ -598,7 +598,8 @@ def nni_query(tiral_sqlite_path, show=True) -> dict:
         if trialjob_id not in params_dict:
         # Append the data to the list, maintaining the order by sequence
             params_dict[trialjob_id] = (parameters['parameters'])
-
+    print('params dict', params_dict)
+    print('score dict', score_dict)
     merged_dict = merge_dicts(score_dict, params_dict)  
     
     if show == True:
@@ -646,13 +647,13 @@ def show_results(path, experiment_code=None, print_content=False):
                             plt.legend()
                             plt.title(f'{trial} loss graph')
                             plt.show()
-                            image_path = os.path.join(path, element,'trials', trial, 'Trained/confusion_matrix.png')
+                            image_path = os.path.join(path, element,'environments/local-env/trials', trial, 'Trained/confusion_matrix.png')
                             img = mpimg.imread(image_path)
 
                             # Visualizza l'immagine
                             plt.imshow(img)
                             plt.show()                        
-                            gif_path = os.path.join(path, element,'trials', trial, 'gifs')
+                            gif_path = os.path.join(path, element,'environments/local-env/trials', trial, 'gifs')
                             if not os.path.exists(gif_path):
                                 print("The gif_path does not exist.")
                             else:
